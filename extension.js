@@ -76,17 +76,20 @@ const FullScreenScaler = new Lang.Class({
     createZoomSurface: function(window) {
     	log('Creating zoom surface for "'+window.get_title()+'".');
         this.zoomSurface = new St.BoxLayout({ style_class: "zoom-surface", vertical: true});
-        let surface = this.getClonedSurface(window);
+
+	    let geometry = global.screen.get_monitor_geometry(0);
+        let surface = this.getClonedSurface(window, geometry.width, geometry.height);
         if (surface === null) {
         	log('Cannot create cloned surface!');
         	this.destroyZoomSurface();
         	return false;
         }
  		this.zoomSurface.add_actor(surface);
- 		prettyPrint(global.stage);
+
 	    global.stage.add_actor(this.zoomSurface);
-	    this.zoomSurface.set_position(30, 30);
- 	    return true;
+        this.zoomSurface.set_position(0, 0);
+ 	    
+        return true;
     },
 
     destroyZoomSurface: function() {
@@ -95,16 +98,20 @@ const FullScreenScaler = new Lang.Class({
     	}
     },
 
-    getClonedSurface: function(window) {
+    getClonedSurface: function(window, screenW, screenH) {
     	let surface = null;
     	let mutterWindow = window.get_compositor_private();
         if (mutterWindow)
         {
             let windowTexture = mutterWindow.get_texture();
             let [width, height] = windowTexture.get_size();
-            let size = 1000;
-            let scale = Math.min(1.0, size / width, size / height);
-            surface = new Clutter.Clone ({ source: windowTexture, reactive: true, width: width * scale, height: height * scale });
+            let scale = Math.min(screenW / width, screenH / height);
+            surface = new Clutter.Clone ({
+                source: windowTexture,
+                reactive: false /*true*/,
+                width: width * scale,
+                height: height * scale
+            });
         }
     	return surface;
     }
