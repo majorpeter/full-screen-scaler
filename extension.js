@@ -2,6 +2,7 @@
 const St = imports.gi.St;
 const Main = imports.ui.main;
 const Lang = imports.lang;
+const Clutter = imports.gi.Clutter;
 const Tweener = imports.ui.tweener;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
@@ -12,6 +13,9 @@ const prettyPrint = Utils.prettyPrint;
 const FullScreenScaler = new Lang.Class({
     Name: 'FullScreenScaler.FullScreenScaler',
     Extends: PanelMenu.Button,
+
+
+	zoomSurface: null,
 
     _init: function() {
         this.parent(0.0, _("Full Screen Scaler"));
@@ -27,6 +31,7 @@ const FullScreenScaler = new Lang.Class({
     },
 
     destroy: function() {
+    	this.destroyZoomSurface();
     	this.parent();
     },
 
@@ -52,7 +57,7 @@ const FullScreenScaler = new Lang.Class({
 	            {
 	            	if (!window.is_skip_taskbar()) {
 		                that.menu.addAction(window.get_title(), function(event) {
-		                	prettyPrint(window);
+		                	that.createZoomSurface(window);
 		                });
 		            }
 	            }
@@ -62,13 +67,48 @@ const FullScreenScaler = new Lang.Class({
 
     _onOpenStateChanged: function(menu, open) {
     	if (open) {
+    		this.destroyZoomSurface();
     		this.removeAllMenuItems();
     		this.buildWindowList();
     	}
+    },
+
+    createZoomSurface: function(window) {
+    	log('Creating zoom surface for "'+window.get_title()+'".');
+        this.zoomSurface = new St.BoxLayout({ style_class: "zoom-surface", vertical: true});
+        let surface = this.getClonedSurface(window);
+        if (surface === null) {
+        	log('Cannot create cloned surface!');
+        	this.destroyZoomSurface();
+        	return false;
+        }
+ 		this.zoomSurface.add_actor(surface);
+ 		prettyPrint(global.stage);
+	    global.stage.add_actor(this.zoomSurface);
+	    this.zoomSurface.set_position(30, 30);
+ 	    return true;
+    },
+
+    destroyZoomSurface: function() {
+    	if (this.zoomSurface !== null) {
+    		this.zoomSurface.destroy();
+    	}
+    },
+
+    getClonedSurface: function(window) {
+    	let surface = null;
+    	let mutterWindow = window.get_compositor_private();
+        if (mutterWindow)
+        {
+            let windowTexture = mutterWindow.get_texture();
+            let [width, height] = windowTexture.get_size();
+            let size = 1000;
+            let scale = Math.min(1.0, size / width, size / height);
+            surface = new Clutter.Clone ({ source: windowTexture, reactive: true, width: width * scale, height: height * scale });
+        }
+    	return surface;
     }
 });
-
-
 
 function init() {
 }
