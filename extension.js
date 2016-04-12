@@ -8,6 +8,7 @@ const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const Extension = imports.misc.extensionUtils.getCurrentExtension();
 const Utils = Extension.imports.utils;
+const MaximusFunc = Extension.imports.maximus_functions;
 const prettyPrint = Utils.prettyPrint;
 
 const FullScreenScaler = new Lang.Class({
@@ -16,6 +17,7 @@ const FullScreenScaler = new Lang.Class({
 
 
 	zoomSurface: null,
+    currentWindow: null,
 
     _init: function() {
         this.parent(0.0, _("Full Screen Scaler"));
@@ -95,16 +97,29 @@ const FullScreenScaler = new Lang.Class({
     destroyZoomSurface: function() {
     	if (this.zoomSurface !== null) {
     		this.zoomSurface.destroy();
+            this.zoomSurface = null;
+            MaximusFunc.decorate(this.currentWindow);
+            let mutterWindow = this.currentWindow.get_compositor_private();
+            if (mutterWindow) {
+                mutterWindow.show();
+            }
+            this.currentWindow = null;
     	}
     },
 
     getClonedSurface: function(window, screenW, screenH) {
+        this.currentWindow = window;
     	let surface = null;
+
     	let mutterWindow = window.get_compositor_private();
         if (mutterWindow)
         {
+            window.focus(0);
+            MaximusFunc.undecorate(window);
+            mutterWindow.hide();
             let windowTexture = mutterWindow.get_texture();
             let [width, height] = windowTexture.get_size();
+
             let scale = Math.min(screenW / width, screenH / height);
             surface = new Clutter.Clone ({
                 source: windowTexture,
